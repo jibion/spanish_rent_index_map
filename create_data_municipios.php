@@ -25,50 +25,73 @@ if ($mysqli->connect_error) {
 // SQL query to select data
 // from database
 $sql2 = "
-with national_average as 
-(select avg(rent_sqm_median) average from data_provincias dp2
-where `year` = 2020
-and `type` = 'VC' 
-group by `year`)
-select
-	concat('ES.', p.CPRO)               id,
-    p.LITPRO                            x,
-    p.abr                               abr,
-	sum(case when `year` = 2020 then truncate(rent_sqm_median,2) else 0 end)         value_2020,
-    sum(case when `year` = 2019 then truncate(rent_sqm_median,2) else 0 end)        value_2019,
-    sum(case when `year` = 2018 then truncate(rent_sqm_median,2) else 0 end)        value_2018,
-    sum(case when `year` = 2017 then truncate(rent_sqm_median,2) else 0 end)        value_2017,
-    sum(case when `year` = 2016 then truncate(rent_sqm_median,2) else 0 end)        value_2016,
-    sum(case when `year` = 2015 then truncate(rent_sqm_median,2) else 0 end)        value_2015,
-    sum(case when `year` = 2020 then truncate(rent_total_median,2) else 0 end)         total_m_2020,
-    sum(case when `year` = 2019 then truncate(rent_total_median,2) else 0 end)        total_m_2019,
-    sum(case when `year` = 2018 then truncate(rent_total_median,2) else 0 end)        total_m_2018,
-    sum(case when `year` = 2017 then truncate(rent_total_median,2) else 0 end)        total_m_2017,
-    sum(case when `year` = 2016 then truncate(rent_total_median,2) else 0 end)        total_m_2016,
-    sum(case when `year` = 2015 then truncate(rent_total_median,2) else 0 end)        total_m_2015,
-    sum(case when `year` = 2020 then truncate(rent_total_p25,2) else 0 end)         total_p25_2020,
-    sum(case when `year` = 2019 then truncate(rent_total_p25,2) else 0 end)        total_p25_2019,
-    sum(case when `year` = 2018 then truncate(rent_total_p25,2) else 0 end)        total_p25_2018,
-    sum(case when `year` = 2017 then truncate(rent_total_p25,2) else 0 end)        total_p25_2017,
-    sum(case when `year` = 2016 then truncate(rent_total_p25,2) else 0 end)        total_p25_2016,
-    sum(case when `year` = 2015 then truncate(rent_total_p25,2) else 0 end)        total_p25_2015,
-    sum(case when `year` = 2020 then truncate(rent_total_p75,2) else 0 end)         total_p75_2020,
-    sum(case when `year` = 2019 then truncate(rent_total_p75,2) else 0 end)        total_p75_2019,
-    sum(case when `year` = 2018 then truncate(rent_total_p75,2) else 0 end)        total_p75_2018,
-    sum(case when `year` = 2017 then truncate(rent_total_p75,2) else 0 end)        total_p75_2017,
-    sum(case when `year` = 2016 then truncate(rent_total_p75,2) else 0 end)        total_p75_2016,
-    sum(case when `year` = 2015 then truncate(rent_total_p75,2) else 0 end)        total_p75_2015
-from
-	data_provincias dp
-join provincias p on
-	dp.cpro = p.cpro
-join national_average na
-where
-	type = 'VC'
-group by 
-	id, x, abr
-order by
-	id asc;";
+with total_rents as (
+    select
+        sum(n_obs) total_rents
+    from
+        data_provincias dp2
+    where
+        `type` = 'VC'
+        and `year` = 2020),
+    total_rents_region as (
+    select
+        p.CCA,
+        sum(n_obs) total_rents
+    from
+        data_provincias dp2
+    join 
+        provincias p on dp2.cpro = p.CPRO 
+    where
+        `type` = 'VC'
+        and `year` = 2020
+    group by CCA)
+    select
+        concat('ES.', p.CPRO) id,
+        p.LITPRO x,
+        p.abr abr,
+        c.CCA cca,
+        c.LITCA y,
+        sum(case when `year` = 2020 then n_obs else 0 end) n_obs,
+        tr.total_rents nation_obs,
+        trr.total_rents region_obs,
+        truncate((sum(case when `year` = 2020 then n_obs else 0 end)/tr.total_rents*100),2) rate_total,
+        truncate((sum(case when `year` = 2020 then n_obs else 0 end)/trr.total_rents*100),2) rate_region,
+        sum(case when `year` = 2020 then truncate(rent_sqm_median, 2) else 0 end) sqm_median_2020,
+        sum(case when `year` = 2019 then truncate(rent_sqm_median, 2) else 0 end) sqm_median_2019,
+        sum(case when `year` = 2018 then truncate(rent_sqm_median, 2) else 0 end) sqm_median_2018,
+        sum(case when `year` = 2017 then truncate(rent_sqm_median, 2) else 0 end) sqm_median_2017,
+        sum(case when `year` = 2016 then truncate(rent_sqm_median, 2) else 0 end) sqm_median_2016,
+        sum(case when `year` = 2015 then truncate(rent_sqm_median, 2) else 0 end) sqm_median_2015,
+        sum(case when `year` = 2020 then truncate(rent_sqm_p25, 2) else 0 end) sqm_p25_2020,
+        sum(case when `year` = 2019 then truncate(rent_sqm_p25, 2) else 0 end) sqm_p25_2019,
+        sum(case when `year` = 2018 then truncate(rent_sqm_p25, 2) else 0 end) sqm_p25_2018,
+        sum(case when `year` = 2017 then truncate(rent_sqm_p25, 2) else 0 end) sqm_p25_2017,
+        sum(case when `year` = 2016 then truncate(rent_sqm_p25, 2) else 0 end) sqm_p25_2016,
+        sum(case when `year` = 2015 then truncate(rent_sqm_p25, 2) else 0 end) sqm_p25_2015,
+        sum(case when `year` = 2020 then truncate(rent_sqm_p75, 2) else 0 end) sqm_p75_2020,
+        sum(case when `year` = 2019 then truncate(rent_sqm_p75, 2) else 0 end) sqm_p75_2019,
+        sum(case when `year` = 2018 then truncate(rent_sqm_p75, 2) else 0 end) sqm_p75_2018,
+        sum(case when `year` = 2017 then truncate(rent_sqm_p75, 2) else 0 end) sqm_p75_2017,
+        sum(case when `year` = 2016 then truncate(rent_sqm_p75, 2) else 0 end) sqm_p75_2016,
+        sum(case when `year` = 2015 then truncate(rent_sqm_p75, 2) else 0 end) sqm_p75_2015
+    from
+        data_provincias dp
+    join provincias p on
+        dp.cpro = p.cpro
+    join comunidades c on
+        p.CCA = c.CCA
+    join total_rents tr
+    join total_rents_region  trr on p.CCA = trr.cca 
+    where
+        type = 'VC'
+    group by 
+        id,
+        x,
+        abr,
+        cca,
+        y
+    order by
+        id asc;";
 $result = $mysqli->query($sql2);
 
 // Fetching data from the database
@@ -76,30 +99,29 @@ $result = $mysqli->query($sql2);
 while ($row = $result->fetch_array()) {
     $provincias[] = array(
         "id" => $row["id"],
-        "value" => $row["value_2020"],
+        "value" => $row["sqm_median_2020"],
+        "n_obs" => $row["n_obs"],
+        "nation_obs" => $row["nation_obs"],
+        "region_obs" => $row["region_obs"],
+        "rate_total" => $row["rate_total"],
+        "rate_region" => $row["rate_region"],
         "x" => $row["x"],
         "abr" => $row["abr"],
-        'm2_rent' => [
-            ["2015", $row["value_2015"]],
-            ["2016", $row["value_2016"]],
-            ["2017", $row["value_2017"]],
-            ["2018", $row["value_2018"]],
-            ["2019", $row["value_2019"]],
-            ["2020", $row["value_2020"]]
-        ],
-        'total_rent' => [
-            ["2015", $row["total_m_2015"], $row["total_p25_2015"], $row["total_p75_2015"]],
-            ["2016", $row["total_m_2016"], $row["total_p25_2016"], $row["total_p75_2016"]],
-            ["2017", $row["total_m_2017"], $row["total_p25_2017"], $row["total_p75_2017"]],
-            ["2018", $row["total_m_2018"], $row["total_p25_2018"], $row["total_p75_2018"]],
-            ["2019", $row["total_m_2019"], $row["total_p25_2019"], $row["total_p75_2019"]],
-            ["2020", $row["total_m_2020"], $row["total_p25_2020"], $row["total_p75_2020"]]
+        "cca" => $row["cca"],
+        "region" => $row["y"],
+        'sqm_rent' => [
+            ["2015", $row["sqm_median_2015"], $row["sqm_p25_2015"], $row["sqm_p75_2015"]],
+            ["2016", $row["sqm_median_2016"], $row["sqm_p25_2016"], $row["sqm_p75_2016"]],
+            ["2017", $row["sqm_median_2017"], $row["sqm_p25_2017"], $row["sqm_p75_2017"]],
+            ["2018", $row["sqm_median_2018"], $row["sqm_p25_2018"], $row["sqm_p75_2018"]],
+            ["2019", $row["sqm_median_2019"], $row["sqm_p25_2019"], $row["sqm_p75_2019"]],
+            ["2020", $row["sqm_median_2020"], $row["sqm_p25_2020"], $row["sqm_p75_2020"]]
         ],
     );
 }
 
 // Creating a dynamic JSON file
-$file = "./data/data_provincias_vc.json";
+$file = "./data/data_vc.json";
 
 // Converting data into JSON and putting
 // into the file

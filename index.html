@@ -11,8 +11,7 @@
   <script src="./js/anychart-data-adapter.min.js"></script>
   <script src="./geodata/countries/spain/spain.js"></script>
   <script src="./js/proj4.js"></script>
-  <link href="./css/style.css" type="text/css"
-    rel="stylesheet">
+  <link href="./css/style.css" type="text/css" rel="stylesheet">
   <link href="./css/anychart-ui.min.css" type="text/css" rel="stylesheet">
   <link href="./fonts/css/anychart-font.min.css" type="text/css" rel="stylesheet">
   <style type="text/css">
@@ -36,12 +35,12 @@
 
     anychart.onDocumentReady(function () {
       anychart.data.loadJsonFile(
-        './data/data_provincias_vc.json',
+        './data/data_vc.json',
         function (data) {
           var regionsData = data;
           var selectedPoint;
           var mapChart;
-          var totalRentChart;
+          var sqmRentChart;
 
           var drawMapChart = function () {
             var map = anychart.map();
@@ -129,7 +128,7 @@
             return map;
           };
 
-          var drawtotalRentChart = function () {
+          var drawsqmRentChart = function () {
             // create column chart
             var chart = anychart.column();
 
@@ -149,7 +148,7 @@
             };
 
             // create first series with mapped data
-            series = chart.column(firstMapping);
+            series = chart.line(firstMapping);
             series.name('Media');
             series.tooltip().title().fontSize(16);
             series.tooltip().titleFormat(function () {
@@ -220,68 +219,146 @@
             return chart;
           };
 
-          var drawm2RentChart = function () {
-            var lineChart = anychart.line(
-              m2RentDataSet.mapAs({ value: 1, x: 0 })
-            );
-            var title = lineChart.title();
-            lineChart.animation(true);
-            //enables HTML tags
-            lineChart.tooltip().format('{%value} €');
-            lineChart.yAxis().title('Coste m2 (€)');
-            lineChart.yAxis().labels().format('{%Value}{groupsSeparator: } €');
-            return lineChart;
-          };
+
+          function getTableCharts() {
+            var table = anychart.standalones.table(3, 2);
+            totalShareNational = solidChart(0);
+            totalShareRegional = solidChart(0);
+            n_rents = anychart.standalones.title();
+            national_label = anychart.standalones.title();
+            ccaa_label = anychart.standalones.title();
+            table.contents([
+              [n_rents],
+              [national_label, ccaa_label],
+              [totalShareNational, totalShareRegional]
+            ]);
+            table.cellBorder(null);
+            table.getRow(0).height(45);
+            table.getRow(1).height(25);
+            table.fontSize(11).useHtml(true).hAlign('center');
+            table
+              .getCell(0, 0)
+              .colSpan(2)
+              .fontSize(14)
+              .vAlign('bottom')
+              .border()
+              .bottom('1px #dedede');
+            table.getRow(1).cellBorder().bottom('2px #dedede');
+            return table;
+          }
+
+          function solidChart(value) {
+            var gauge = anychart.gauges.circular();
+            gauge.data([value, 100]);
+            gauge.padding(5);
+            gauge.margin(0);
+            var axis = gauge.axis().radius(100).width(1).fill(null);
+            axis
+              .scale()
+              .minimum(0)
+              .maximum(100)
+              .ticks({ interval: 1 })
+              .minorTicks({ interval: 1 });
+            axis.labels().enabled(false);
+            axis.ticks().enabled(false);
+            axis.minorTicks().enabled(false);
+
+            var stroke = '1 #e5e4e4';
+            gauge
+              .bar(0)
+              .dataIndex(0)
+              .radius(80)
+              .width(40)
+              .fill('#64b5f6')
+              .stroke(null)
+              .zIndex(5);
+            gauge
+              .bar(1)
+              .dataIndex(1)
+              .radius(80)
+              .width(40)
+              .fill('#F5F4F4')
+              .stroke(stroke)
+              .zIndex(4);
+            gauge
+              .label()
+              .width('50%')
+              .height('25%')
+              .adjustFontSize(true)
+              .hAlign('center')
+              .anchor('center');
+            gauge
+              .label()
+              .hAlign('center')
+              .anchor('center')
+              .padding(5, 10)
+              .zIndex(1);
+            gauge.background().enabled(false);
+            gauge.fill(null);
+            gauge.stroke(null);
+            return gauge;
+          }
 
 
-          var totalRentDataSet = anychart.data.set();
-          var m2RentDataSet = anychart.data.set();
+          var sqmRentDataSet = anychart.data.set();
 
-          var firstSeries = m2RentDataSet.mapAs({
+          var firstMapping = sqmRentDataSet.mapAs({
             value: 1,
             x: 0
           });
-          var firstMapping = totalRentDataSet.mapAs({
-            value: 1,
-            x: 0
-          });
-          var secondMapping = totalRentDataSet.mapAs({
+          var secondMapping = sqmRentDataSet.mapAs({
             value: 2,
             x: 0
           });
-          var thirdMapping = totalRentDataSet.mapAs({
+          var thirdMapping = sqmRentDataSet.mapAs({
             value: 3,
             x: 0
           });
 
           var changeContents = function (index) {
-            totalRentDataSet.data(regionsData[index].total_rent);
-            m2RentDataSet.data(regionsData[index].m2_rent);
-            m2RentChart.title().align("center").enabled(true).useHtml(true).text(
+            sqmRentDataSet.data(regionsData[index].sqm_rent);
+
+            sqmRentChart.title().align("center").enabled(true).useHtml(true).text(
               "<strong>" + regionsData[index].x + "</strong><br />Precio del alquiler por metro cuadrado");
+
+            totalShareNational.data([regionsData[index].rate_total, 100]);
+            totalShareNational.label().useHtml(true).text('<span style="font-size:18px; font-weight:600;">' 
+              + regionsData[index].rate_total + '%</span><br><span style="font-size:11px;"> de ' + 
+                parseInt(regionsData[index].nation_obs).toLocaleString() + ' viviendas alquiladas</span>');
+
+            totalShareRegional.data([regionsData[index].rate_region, 100]);
+            totalShareRegional.label().useHtml(true).text('<span style="font-size:18px; font-weight:600;">' 
+              + regionsData[index].rate_region + '%</span><br><span style="font-size:11px;"> de ' + 
+                parseInt(regionsData[index].region_obs).toLocaleString() + ' viviendas alquiladas</span>');
+
+            n_rents.useHtml(true).text('Numero de alquileres: <b>' + parseInt(regionsData[index].n_obs).toLocaleString() + '</b>').padding(4,0,0,0);
+            national_label.text('Total nacional').fontSize(11).fontWeight(400).padding(4,0,0,0);
+            ccaa_label.text(regionsData[index].region).fontSize(11).fontWeight(900).padding(4,0,0,0);
+
+
           };
           mapChart = drawMapChart();
-          totalRentChart = drawtotalRentChart();
-          m2RentChart = drawm2RentChart();
+          sqmRentChart = drawsqmRentChart();
+          tableCharts = getTableCharts();
 
           function fillInMainTable(flag) {
             if (flag === 'wide') {
               layoutTable.contents(
                 [
-                  [mapChart, m2RentChart],
-                  [null, totalRentChart]
+                  [mapChart, sqmRentChart],
+                  [null, tableCharts]
                 ],
                 true
               );
               layoutTable.getCell(0, 0).rowSpan(2);
               layoutTable.getCol(0).width('65%');
-              layoutTable.getRow(0).height('60%');
+              layoutTable.getRow(0).height('55%');
             } else {
               layoutTable.contents(
                 [
                   [mapChart],
                   [m2RentChart],
-                  [totalRentChart]
+                  [sqmRentChart]
                 ],
                 true
               );
