@@ -34,6 +34,7 @@
   <script>
 
     anychart.onDocumentReady(function () {
+      anychart.theme(anychart.themes.morning);
       anychart.data.loadJsonFile(
         './data/data_vc.json',
         function (data) {
@@ -357,8 +358,8 @@
               layoutTable.contents(
                 [
                   [mapChart],
-                  [m2RentChart],
-                  [sqmRentChart]
+                  [sqmRentChart],
+                  [tableCharts]
                 ],
                 true
               );
